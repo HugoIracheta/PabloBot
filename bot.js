@@ -1,8 +1,11 @@
-var Discord = require('discord.io');
+const Discord = require('discord.js');
 var logger = require('winston');
 var auth = require('./auth.json');
 var mysql = require('mysql');
 var request = require('request');
+const express = require('express');
+const bodyParser = require('body-parser');
+const http = require('http');
 
 var con = mysql.createConnection({
   host: "localhost",
@@ -11,58 +14,104 @@ var con = mysql.createConnection({
   database: "pablodb"
 });
 
-
+const client = new Discord.Client();
 // Configure logger settings
 logger.remove(logger.transports.Console);
 logger.add(new logger.transports.Console, {
     colorize: true
 });
 logger.level = 'debug';
-// Initialize Discord Bot
-var bot = new Discord.Client({
-   token: auth.token,
-   autorun: true
+
+client.once('ready', () => {
+    console.log('Ready!');
 });
-bot.on('ready', function (evt) {
-    logger.info('Connected');
-    logger.info('Logged in as: ');
-    logger.info(bot.username + ' - (' + bot.id + ')');
-    con.connect(function(err) {
-      if (err) throw err;
-      console.log("Connected!");
+
+client.login(auth.token);
+
+const server = express();
+server.use(bodyParser.urlencoded({
+    extended: true
+}));
+
+server.use(bodyParser.json());
+
+server.post('/confluence', (req, res) => {
+    res.status(200);
+    res.send();
+
+    var channelID = 0;
+    var event = req['headers']['x-event-key'];
+    console.log(req['headers']['x-event-key']);
+
+    //console.log(req['body']['actor']['links']['html']['href']);
+
+    var sql = "SELECT channelID from bitbucket_repo where repo_name LIKE '%"+req['body']['repository']['name']+"%'";
+    con.query(sql, function (err, result, fields) {
+        if (err) throw err;
+        if(result == null || result.length < 1){
+        }else{
+            var description = "";
+            switch(event){
+                case "pullrequest:created":
+                    description = "Chequen este Pull Request tios :pray:";
+                    break;
+
+                case "pullrequest:updated":
+                    description = req['body']['actor']['display_name']+" actualizo un pr :open_mouth:";
+                    break;
+
+                case "pullrequest:approved":
+                    description = req['body']['actor']['display_name']+" aprobo este pr :cara3:";
+                    break;
+
+                case "pullrequest:fulfilled":
+                    description = req['body']['actor']['display_name']+" mergeo este pr :poggers:";
+                    break;
+            }
+            var title = 'Pull Request a '+req['body']['repository']['name'] + ": "+req['body']["pullrequest"]['title'];
+            var titleUrl = req['body']["pullrequest"]["links"]["html"]['href'];
+            var author = req['body']['actor']['display_name'];
+            var authorImage = req['body']['actor']['links']['avatar']['href'];
+            var authorUrl = req['body']['actor']['links']['html']['href'];
+            var thumbnail = "https://pbs.twimg.com/profile_images/1026981625291190272/35O2KIRX_400x400.jpg";
+            console.log("aaa");
+            //sendDiscordMessage(channel, createEmbeded(title, titleUrl, author, authorImage, authorUrl, description, thumbnail));
+            //var message = req['body']['actor']['display_name']+' hizo un push a '+req['body']['repository']['name']+". Checalo aqui: "+req['body']['repository']['links']['html']['href'];
+            for(var i = 0; i<result.length; i++){
+                sendDiscordMessage(client.channels.get(result[i].channelID), createEmbeded(title, titleUrl, author, authorImage, authorUrl, description, thumbnail));
+            }
+        }
     });
 });
-bot.on('message', function (user, userID, channelID, message, evt) {
-    // Our bot needs to know if it will execute a command
-    // It will listen for messages that will start with `!`
 
-    if(user == "Pokécord"){
+server.listen((process.env.PORT || 856), () => {
+    console.log("Server is up and running...");
+});
+    
+    client.on('message', msg => {
+        var user = msg.member.user;
+        var userID = msg.member.user.id;
+        var channelID  = msg.channel.id;
+        var message = msg.content;
+        var channel = msg.channel;
+        if(user == "Pokécord"){
         if(message.indexOf("has challenged you to a duel") > -1){
             var sql = "SELECT source from source where INSTR('malfoy', command) > 0";
                 con.query(sql, function (err, result, fields) {
                     if (err) throw err;
                     if(result == null || result.length < 1){
                     }else{
-                        bot.sendMessage({
-                            to: channelID,
-                            message: result[0].source
-                        });
+                        sendDiscordMessage(channel, result[0].source);
                     }
                 });
         }else if(message.indexOf("Duel accepted!") > -1){
-            bot.sendMessage({
-                to: channelID,
-                message: "https://www.youtube.com/watch?v=ybTL7mI6K2M"
-            });
+             sendDiscordMessage(channel, "https://www.youtube.com/watch?v=ybTL7mI6K2M");
              var sql = "SELECT source from source where INSTR('potter', command) > 0";
                 con.query(sql, function (err, result, fields) {
                     if (err) throw err;
                     if(result == null || result.length < 1){
                     }else{
-                        bot.sendMessage({
-                            to: channelID,
-                            message: result[0].source
-                        });
+                        sendDiscordMessage(channel, result[0].source);
                     }
                 });
         }
@@ -72,9 +121,32 @@ bot.on('message', function (user, userID, channelID, message, evt) {
     if (user != "Pablo Bot" && /^[ a-zA-Z0-9_.-:\/?=-]*$/.test(message)) {
         var args = message.split(' ');
         var cmd = args[0];
-        args = args.splice(1);    
+        var noncutargs = message.split(' ');
+        args = args.splice(1);
         switch(cmd) {
             // !ping
+            case 'bitbucket':
+                var nombreRepo = "";
+                for(var i = 1; i<args.length; i++){
+                    nombreRepo += args[i]+" ";
+                }
+                if(args[0] == "set"){
+                    var sql = "INSERT INTO bitbucket_repo (channelID, repo_name) VALUES ('"+channelID+"', '"+nombreRepo+"')";
+                    con.query(sql, function (err, result) {
+                        if (err) throw err;
+                        sendDiscordMessage(channel, "Se configuro el repositorio compa");
+                    }); 
+                } else if(args[0] == "unset"){
+                    var sql = "DELETE FROM bitbucket_repo WHERE channelID = '"+channelID+"' AND repo_name = '"+nombreRepo+"'";
+                    con.query(sql, function (err, result) {
+                        if (err) throw err;
+                        sendDiscordMessage(channel, "Se desconfiguro el repositorio compa :(");
+                    }); 
+
+                }
+                break;
+
+
             case 'intro':
                 bot.sendMessage({
                     to: channelID,
@@ -91,18 +163,44 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                 request('https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=25&q='+searchString+'&type&key=AIzaSyBeyTLfpXd7uHGGoAjmBA_p-AXEqESJzuU', function (error, response, body) {
                   var json = JSON.parse(body);
                   var items = json['items'];
-                  for(var p = 0; p<items.length; p++){
-                    if(items[p]['id']['kind'] == 'youtube#video'){
-                      bot.sendMessage({
-                        to: channelID,
-                        message: "https://www.youtube.com/watch?v="+items[p]['id']['videoId']
-                      });
-                      break;
+                  if(items[0] != null){
+                      for(var p = 0; p<items.length; p++){
+                        if(items[p]['id']['kind'] == 'youtube#video'){
+                          sendDiscordMessage(channel, "https://www.youtube.com/watch?v="+items[p]['id']['videoId']);
+                          break;
+                        }
+                      }
+                    }else{
+                        sendDiscordMessage(channel, "No se encontraron resultados <@"+userID+"> :c");
                     }
-                  }
                 });
                 break;
 
+            case 'embeded':
+                    sendDiscordMessage(channel, createEmbeded("title", "https://discordjs.guide/creating-your-bot/#listening-for-messages", "author", "https://vignette.wikia.nocookie.net/meme/images/4/42/1385136139955.png/revision/latest?cb=20150207013804", "https://discordjs.guide/creating-your-bot/#listening-for-messages", "description", "https://vignette.wikia.nocookie.net/meme/images/4/42/1385136139955.png/revision/latest?cb=20150207013804"));
+                    break;
+
+
+            case 'tenor':
+                var searchString = "";
+                for(var i = 0; i<args.length; i++){
+                    searchString += args[i]+" ";
+                }
+                request('https://api.tenor.com/v1/search?key=DOP4FGV8TWFO&q='+searchString+'&locale=en_US&contentfilter=off&limit=1', function (error, response, body) {
+                    if(body === undefined){
+                        sendDiscordMessage(channel, "Ups no hay internet :c");
+                        sendDiscordMessage(channel, results[0]['itemurl']);
+                        return;
+                    }
+                  var json = JSON.parse(body);
+                  var results = json['results'];
+                  if(results[0] != null){   
+                        sendDiscordMessage(channel, results[0]['itemurl']);
+                  }else{
+                        sendDiscordMessage(channel, "No se encontraron resultados <@"+userID+"> :c");
+                  }
+                });
+                break;
 
             case 'help':
                 request({
@@ -121,14 +219,8 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                 var christmas  = new Date(year, 06, 26);
                 var today = new Date();
                 var until = Date.daysBetween(today, christmas);
-                bot.sendMessage({
-                    to: channelID,
-                    message: 'Faltan '+until+' dias para el factor !'
-                });
-                bot.sendMessage({
-                    to: channelID,
-                    message: '!aah'
-                });
+                sendDiscordMessage(channel, 'Faltan '+until+' dias para el factor !');
+                sendDiscordMessage(channel, '!aah');
 
                 break;
 
@@ -142,6 +234,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                     to: channelID,
                     message: 'Faltan '+until+' dias para navida tio!'
                 });
+                sendDiscordMessage(channel, 'Faltan '+until+' dias para navida tio!');
 
                 break;
 
@@ -149,18 +242,12 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                 var smush  = new Date(2018, 11, 7);
                 var today = new Date();
                 if(today.getDate()){
-                  bot.sendMessage({
-                    to: channelID,
-                    message: '!hoy'
-                  });
+                        sendDiscordMessage(channel, '!hoy');
                   break;
                 }
                 smush.setHours(0);
                 var until = Date.timeBetween(today, smush);
-                bot.sendMessage({
-                    to: channelID,
-                    message: 'Faltan '+until+' para Super Smash Bros. Ultimate tio!'
-                });
+                sendDiscordMessage(channel, 'Faltan '+until+' para Super Smash Bros. Ultimate tio!');
 
                 break;
 
@@ -168,21 +255,19 @@ bot.on('message', function (user, userID, channelID, message, evt) {
             case 'marioparty':
             case 'comida':
             case 'expresopolar':
+            case 'papaasada':
                 var now  = new Date();
                 var day = (now.getHours() >= 13) ? now.getDate() + 1 : now.getDate();
                 var meleeHour = new Date(now.getFullYear(), now.getMonth(), day);
                 meleeHour.setHours  (13)
                 var until = Date.timeBetween(now, meleeHour);
-                if(until  === null){
+                if(until.substring(0,2)>21){
                     bot.sendMessage({
                         to: channelID,
                         message: 'Ya es la hora de '+cmd+' tio'
                     });
                 }else{
-                    bot.sendMessage({
-                        to: channelID,
-                        message: 'Faltan '+until+' para el '+cmd+' tio!'
-                    });
+                    sendDiscordMessage(channel, 'Faltan '+until+' para el '+cmd+' tio!');
                 }
 
                 break;
@@ -190,22 +275,12 @@ bot.on('message', function (user, userID, channelID, message, evt) {
             case 'random':
                 var length = args.length;
                 var index = Math.floor((Math.random() * length) + 0);
-                bot.sendMessage({
-                    to: channelID,
-                    message: 'El resultados es '+args[index]+' tios!'
-                });
+                sendDiscordMessage(channel, 'El resultados es '+args[index]+' tios!');
                 break;
 
             case 'source':
                 switch(args[0]){
                     case 'create':
-                    if(user == "Stemen"){
-                        bot.sendMessage({
-                            to: 167060297016803328,
-                            message: 'Mike intento hacer el source: '+message
-                        });
-                        break;
-                    }
                      var sql = "SELECT source from source where command = '"+args[1]+"'";
                         con.query(sql, function (err, result, fields) {
                             if (err) throw err;
@@ -217,16 +292,10 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                                 var sql = "INSERT INTO source (command, source) VALUES ('"+args[1]+"', '"+string+"')";
                                 con.query(sql, function (err, result) {
                                     if (err) throw err;
-                                    bot.sendMessage({
-                                        to: channelID,
-                                        message: "El source esta listo pa usarse tio"
-                                    });
+                                    sendDiscordMessage(channel, "El source esta listo pa usarse tio");
                                 });
                             }else{
-                                bot.sendMessage({
-                                    to: channelID,
-                                    message: "ese source ya existe weon >:-("
-                                });
+                                    sendDiscordMessage(channel, "ese source ya existe weon >:-(");
                             }
                         });
                     break;
@@ -234,11 +303,8 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                     case 'delete':
                         var sql = "DELETE FROM source WHERE command = '"+args[1]+"'";
                         con.query(sql, function (err, result) {
-                            if (err) throw err; 
-                            bot.sendMessage({
-                                to: channelID,
-                                message: "Se elimino el source :("
-                            });
+                            if (err) throw err;
+                            sendDiscordMessage(channel, "Se elimino el source :(");
                         });
                     break;
 
@@ -249,11 +315,9 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                         }
                         var sql = "UPDATE source SET source = '"+string+"' WHERE command = '"+args[1]+"'";
                         con.query(sql, function (err, result) {
-                            if (err) throw err; 
-                            bot.sendMessage({
-                                to: channelID,
-                                message: "Se edito el source :poggers:"
-                            });
+                            if (err) throw err;
+                            sendDiscordMessage(channel, "Se edito el source :poggers:");
+
                         });
                     break;
                     case 'list':
@@ -264,10 +328,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                             for(var i = 0; i<result.length; i++){
                               message += " !"+result[i].command+",";
                             }
-                            bot.sendMessage({
-                                to: channelID,
-                                message: message
-                            });
+                            sendDiscordMessage(channel, message);
                         });
                     break;
 
@@ -277,10 +338,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                             if (err) throw err;
                             if(result == null || result.length < 1){
                             }else{
-                                bot.sendMessage({
-                                    to: channelID,
-                                    message: result[0].source
-                                });
+                                sendDiscordMessage(channel, result[0].source);
                             }
                         });
                     break;
@@ -289,22 +347,21 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                 break;
 
                 default:
-                    var sql = "SELECT source from source where INSTR('"+message+"', command) > 0";
-                    con.query(sql, function (err, result, fields) {
-                        if (err) throw err;
-                        if(result == null || result.length < 1){
-                        }else{
-                            bot.sendMessage({
-                                to: channelID,
-                                message: result[0].source
-                            });
-                        }
-                    });
+                    for(var i = 0; i<noncutargs.length; i++){
+                        var sql = "SELECT source FROM source WHERE command COLLATE latin1_general_cs = '"+noncutargs[i]+"'";
+                        con.query(sql, function (err, result, fields) {
+                            if (err) throw err;
+                            if(result == null || result.length < 1){
+                            }else{
+                                sendDiscordMessage(channel, result[0].source);
+                            }
+                        });
+                    }
                 break;
             // Just add any case commands if you want to..
          }
      }
-});
+    });
 
 Date.daysBetween = function( date1, date2 ) {
   //Get 1 day in milliseconds
@@ -342,4 +399,21 @@ Date.timeBetween = function( date1, date2 ) {
   var segundos = Math.round(restante/one_second);
 
   return horas+" horas "+minutos+" minutos "+segundos+" segundos"; 
+}
+
+function sendDiscordMessage(channel, message){
+    channel.send(message);
+}
+
+function createEmbeded(title, titleUrl, author, authorImage, authorUrl, description, thumbnail){
+    var exampleEmbed = new Discord.RichEmbed()
+    .setColor('#0099ff')
+    .setTitle(title)
+    .setURL(titleUrl)
+    .setAuthor(author, authorImage, authorUrl)
+    .setDescription(description)
+    .setThumbnail(thumbnail)
+    .setTimestamp()
+
+    return exampleEmbed
 }
