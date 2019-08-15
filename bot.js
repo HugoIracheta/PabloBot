@@ -76,6 +76,10 @@ server.post('/confluence', (req, res) => {
                     var poggers = client.emojis.find(emoji => emoji.name === "poggers");
                     description = req['body']['actor']['display_name']+" mergeo este pr "+poggers.toString();
                     break;
+
+                default:
+                    description = "Se realizo una accion con el pr :)";
+
             }
             var title = 'Pull Request a '+req['body']['repository']['name'] + ": "+req['body']["pullrequest"]['title'];
             var titleUrl = req['body']["pullrequest"]["links"]["html"]['href'];
@@ -102,6 +106,7 @@ var listener = server.listen((process.env.PORT || 1337), () => {
         var user = msg.member.user;
         var userID = msg.member.user.id;
         var channelID  = msg.channel.id;
+        console.log(channelID);
         var message = msg.content;
         var channel = msg.channel;
         if(user == "Pokécord"){
@@ -413,7 +418,11 @@ Date.timeBetween = function( date1, date2 ) {
 }
 
 function sendDiscordMessage(channel, message){
-    channel.send(message);
+    try{
+        channel.send(message);
+    }catch(ex){
+        console.log("ERRRRRRRROR: "+ex);
+    }
 }
 
 function createEmbeded(title, titleUrl, author, authorImage, authorUrl, description, thumbnail){
