@@ -45,56 +45,59 @@ server.get("/", (req, res)  =>{
 server.post('/confluence', (req, res) => {
     res.status(200);
     res.send();
+    try{
+        var channelID = 0;
+        var event = req['headers']['x-event-key'];
+        console.log(req['headers']['x-event-key']);
 
-    var channelID = 0;
-    var event = req['headers']['x-event-key'];
-    console.log(req['headers']['x-event-key']);
+        //console.log(req['body']['actor']['links']['html']['href']);
 
-    //console.log(req['body']['actor']['links']['html']['href']);
+        var sql = "SELECT channelID from bitbucket_repo where repo_name LIKE '%"+req['body']['repository']['name']+"%'";
+        con.query(sql, function (err, result, fields) {
+            if (err) throw err;
+            if(result == null || result.length < 1){
+            }else{
+                var description = "";
+                switch(event){
+                    case "pullrequest:created":
+                        description = "Chequen este Pull Request tios :pray:";
+                        break;
 
-    var sql = "SELECT channelID from bitbucket_repo where repo_name LIKE '%"+req['body']['repository']['name']+"%'";
-    con.query(sql, function (err, result, fields) {
-        if (err) throw err;
-        if(result == null || result.length < 1){
-        }else{
-            var description = "";
-            switch(event){
-                case "pullrequest:created":
-                    description = "Chequen este Pull Request tios :pray:";
-                    break;
+                    case "pullrequest:updated":
+                        description = req['body']['actor']['display_name']+" actualizo un pr :open_mouth:";
+                        break;
 
-                case "pullrequest:updated":
-                    description = req['body']['actor']['display_name']+" actualizo un pr :open_mouth:";
-                    break;
+                    case "pullrequest:approved":
+                        var cara3 = client.emojis.find(emoji => emoji.name === "cara3");
+                        description = req['body']['actor']['display_name']+" aprobo este pr "+cara3.toString();
+                        break;
 
-                case "pullrequest:approved":
-                    var cara3 = client.emojis.find(emoji => emoji.name === "cara3");
-                    description = req['body']['actor']['display_name']+" aprobo este pr "+cara3.toString();
-                    break;
+                    case "pullrequest:fulfilled":
+                        var poggers = client.emojis.find(emoji => emoji.name === "poggers");
+                        description = req['body']['actor']['display_name']+" mergeo este pr "+poggers.toString();
+                        break;
 
-                case "pullrequest:fulfilled":
-                    var poggers = client.emojis.find(emoji => emoji.name === "poggers");
-                    description = req['body']['actor']['display_name']+" mergeo este pr "+poggers.toString();
-                    break;
+                    default:
+                        description = "Se realizo una accion con el pr :)";
 
-                default:
-                    description = "Se realizo una accion con el pr :)";
-
+                }
+                var title = 'Pull Request a '+req['body']['repository']['name'] + ": "+req['body']["pullrequest"]['title'];
+                var titleUrl = req['body']["pullrequest"]["links"]["html"]['href'];
+                var author = req['body']['actor']['display_name'];
+                var authorImage = req['body']['actor']['links']['avatar']['href'];
+                var authorUrl = req['body']['actor']['links']['html']['href'];
+                var thumbnail = "https://pbs.twimg.com/profile_images/1026981625291190272/35O2KIRX_400x400.jpg";
+                console.log("aaa");
+                //sendDiscordMessage(channel, createEmbeded(title, titleUrl, author, authorImage, authorUrl, description, thumbnail));
+                //var message = req['body']['actor']['display_name']+' hizo un push a '+req['body']['repository']['name']+". Checalo aqui: "+req['body']['repository']['links']['html']['href'];
+                for(var i = 0; i<result.length; i++){
+                    sendDiscordMessage(client.channels.get(result[i].channelID), createEmbeded(title, titleUrl, author, authorImage, authorUrl, description, thumbnail));
+                }
             }
-            var title = 'Pull Request a '+req['body']['repository']['name'] + ": "+req['body']["pullrequest"]['title'];
-            var titleUrl = req['body']["pullrequest"]["links"]["html"]['href'];
-            var author = req['body']['actor']['display_name'];
-            var authorImage = req['body']['actor']['links']['avatar']['href'];
-            var authorUrl = req['body']['actor']['links']['html']['href'];
-            var thumbnail = "https://pbs.twimg.com/profile_images/1026981625291190272/35O2KIRX_400x400.jpg";
-            console.log("aaa");
-            //sendDiscordMessage(channel, createEmbeded(title, titleUrl, author, authorImage, authorUrl, description, thumbnail));
-            //var message = req['body']['actor']['display_name']+' hizo un push a '+req['body']['repository']['name']+". Checalo aqui: "+req['body']['repository']['links']['html']['href'];
-            for(var i = 0; i<result.length; i++){
-                sendDiscordMessage(client.channels.get(result[i].channelID), createEmbeded(title, titleUrl, author, authorImage, authorUrl, description, thumbnail));
-            }
-        }
-    });
+        });
+    }catch(ex){
+        sendErrorMessage(ex);
+    }
 });
 
 var listener = server.listen((process.env.PORT || 1337), () => {
@@ -106,7 +109,6 @@ var listener = server.listen((process.env.PORT || 1337), () => {
         var user = msg.member.user;
         var userID = msg.member.user.id;
         var channelID  = msg.channel.id;
-        console.log(channelID);
         var message = msg.content;
         var channel = msg.channel;
         if(user == "Pokécord"){
@@ -421,8 +423,12 @@ function sendDiscordMessage(channel, message){
     try{
         channel.send(message);
     }catch(ex){
-        console.log("ERRRRRRRROR: "+ex);
+        sendErrorMessage(ex);
     }
+}
+
+function sendErrorMessage(ex){
+    client.channels.get("512056426001203240").send("Hugo, hubo un error, pero aqui esta: "+ex);
 }
 
 function createEmbeded(title, titleUrl, author, authorImage, authorUrl, description, thumbnail){
