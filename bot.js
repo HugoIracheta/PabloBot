@@ -35,6 +35,13 @@ server.use(bodyParser.urlencoded({
 
 server.use(bodyParser.json());
 
+
+server.get("/", (req, res)  =>{
+        res.status(200);
+        res.send();
+});
+
+
 server.post('/confluence', (req, res) => {
     res.status(200);
     res.send();
@@ -61,11 +68,13 @@ server.post('/confluence', (req, res) => {
                     break;
 
                 case "pullrequest:approved":
-                    description = req['body']['actor']['display_name']+" aprobo este pr :cara3:";
+                    var cara3 = client.emojis.find(emoji => emoji.name === "cara3");
+                    description = req['body']['actor']['display_name']+" aprobo este pr "+cara3.toString();
                     break;
 
                 case "pullrequest:fulfilled":
-                    description = req['body']['actor']['display_name']+" mergeo este pr :poggers:";
+                    var poggers = client.emojis.find(emoji => emoji.name === "poggers");
+                    description = req['body']['actor']['display_name']+" mergeo este pr "+poggers.toString();
                     break;
             }
             var title = 'Pull Request a '+req['body']['repository']['name'] + ": "+req['body']["pullrequest"]['title'];
@@ -84,8 +93,9 @@ server.post('/confluence', (req, res) => {
     });
 });
 
-server.listen((process.env.PORT || 856), () => {
+var listener = server.listen((process.env.PORT || 1337), () => {
     console.log("Server is up and running...");
+    console.log(listener.address());
 });
     
     client.on('message', msg => {
@@ -213,13 +223,14 @@ server.listen((process.env.PORT || 856), () => {
                 });
             break;
 
+            case 'tacosarabes':
             case 'factor':
                 var year = new Date();
                 year = year.getFullYear();
                 var christmas  = new Date(year, 06, 26);
                 var today = new Date();
                 var until = Date.daysBetween(today, christmas);
-                sendDiscordMessage(channel, 'Faltan '+until+' dias para el factor !');
+                sendDiscordMessage(channel, 'Faltan '+until+' dias para LOS TACOS ARABES!');
                 sendDiscordMessage(channel, '!aah');
 
                 break;
