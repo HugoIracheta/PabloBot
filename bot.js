@@ -42,7 +42,7 @@ server.get("/", (req, res)  =>{
 });
 
 
-server.post('/confluence', (req, res) => {
+server.post('/bitbucket', (req, res) => {
     res.status(200);
     res.send();
     try{
