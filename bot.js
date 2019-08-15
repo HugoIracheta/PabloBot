@@ -58,6 +58,7 @@ server.post('/bitbucket', (req, res) => {
             if(result == null || result.length < 1){
             }else{
                 var description = "";
+                var comment = "";
                 switch(event){
                     case "pullrequest:created":
                         description = "Chequen este Pull Request tios :pray:";
@@ -77,6 +78,17 @@ server.post('/bitbucket', (req, res) => {
                         description = req['body']['actor']['display_name']+" mergeo este pr "+poggers.toString();
                         break;
 
+                    case "pullrequest:unapproved":
+                        var cryingpepe = client.emojis.find(emoji => emoji.name === "cryingpepe");
+                        description = req['body']['actor']['display_name']+" le quito la aprobacion a este pr "+cryingpepe.toString();
+                        break;
+
+                    case "pullrequest:comment_created":
+                        var perritosandia = client.emojis.find(emoji => emoji.name === "perritosandia");
+                        description = req['body']['actor']['display_name']+" creo un comentario "+perritosandia.toString();
+                        comment = req['body']['comment']['content']['raw'];
+                        break;
+
                     default:
                         description = "Se realizo una accion con el pr :)";
 
@@ -87,11 +99,10 @@ server.post('/bitbucket', (req, res) => {
                 var authorImage = req['body']['actor']['links']['avatar']['href'];
                 var authorUrl = req['body']['actor']['links']['html']['href'];
                 var thumbnail = "https://pbs.twimg.com/profile_images/1026981625291190272/35O2KIRX_400x400.jpg";
-                console.log("aaa");
                 //sendDiscordMessage(channel, createEmbeded(title, titleUrl, author, authorImage, authorUrl, description, thumbnail));
                 //var message = req['body']['actor']['display_name']+' hizo un push a '+req['body']['repository']['name']+". Checalo aqui: "+req['body']['repository']['links']['html']['href'];
                 for(var i = 0; i<result.length; i++){
-                    sendDiscordMessage(client.channels.get(result[i].channelID), createEmbeded(title, titleUrl, author, authorImage, authorUrl, description, thumbnail));
+                    sendDiscordMessage(client.channels.get(result[i].channelID), createEmbeded(title, titleUrl, author, authorImage, authorUrl, description, thumbnail, comment));
                 }
             }
         });
@@ -431,7 +442,8 @@ function sendErrorMessage(ex){
     client.channels.get("512056426001203240").send("Hugo, hubo un error, pero aqui esta: "+ex);
 }
 
-function createEmbeded(title, titleUrl, author, authorImage, authorUrl, description, thumbnail){
+function createEmbeded(title, titleUrl, author, authorImage, authorUrl, description, thumbnail, comment = ""){
+    
     var exampleEmbed = new Discord.RichEmbed()
     .setColor('#0099ff')
     .setTitle(title)
@@ -439,7 +451,10 @@ function createEmbeded(title, titleUrl, author, authorImage, authorUrl, descript
     .setAuthor(author, authorImage, authorUrl)
     .setDescription(description)
     .setThumbnail(thumbnail)
-    .setTimestamp()
+    .setTimestamp();
+    if(comment != ""){
+        exampleEmbed.addField('Comentario', comment)
+    }
 
     return exampleEmbed
 }
