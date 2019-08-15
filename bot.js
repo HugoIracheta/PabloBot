@@ -55,7 +55,7 @@ server.post('/bitbucket', (req, res) => {
         var sql = "SELECT channelID from bitbucket_repo where repo_name LIKE '%"+req['body']['repository']['name']+"%'";
         con.query(sql, function (err, result, fields) {
             if (err) throw err;
-            if(result == null || result.length < 1){
+            if(result == null || result.length < 1 || req['body']["pullrequest"] == null){
             }else{
                 var description = "";
                 var comment = "";
@@ -453,7 +453,7 @@ function createEmbeded(title, titleUrl, author, authorImage, authorUrl, descript
     .setThumbnail(thumbnail)
     .setTimestamp();
     if(comment != ""){
-        exampleEmbed.addField('Comentario', comment)
+        exampleEmbed.addField('Comentario:', '"'+comment+'"')
     }
 
     return exampleEmbed
