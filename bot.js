@@ -10,7 +10,7 @@ const http = require('http');
 var con = mysql.createConnection({
   host: "localhost",
   user: "root",
-  password: "",
+  password: "weqwzgyhnewy",
   database: "pablodb"
 });
 
