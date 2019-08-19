@@ -174,14 +174,6 @@ var listener = server.listen((process.env.PORT || 1337), () => {
                 }
                 break;
 
-
-            case 'intro':
-                bot.sendMessage({
-                    to: channelID,
-                    message: 'Hola tio '+user+'!'
-                });
-                break;
-
             case 'u2':
             case 'youtube':
                 var searchString = "";
@@ -259,10 +251,6 @@ var listener = server.listen((process.env.PORT || 1337), () => {
                 var christmas  = new Date(year, 11, 25);
                 var today = new Date();
                 var until = Date.daysBetween(today, christmas);
-                bot.sendMessage({
-                    to: channelID,
-                    message: 'Faltan '+until+' dias para navida tio!'
-                });
                 sendDiscordMessage(channel, 'Faltan '+until+' dias para navida tio!');
 
                 break;
@@ -291,10 +279,7 @@ var listener = server.listen((process.env.PORT || 1337), () => {
                 meleeHour.setHours  (13)
                 var until = Date.timeBetween(now, meleeHour);
                 if(until.substring(0,2)>21){
-                    bot.sendMessage({
-                        to: channelID,
-                        message: 'Ya es la hora de '+cmd+' tio'
-                    });
+                     sendDiscordMessage(channel, 'Ya es la hora de '+cmd+' tio');
                 }else{
                     sendDiscordMessage(channel, 'Faltan '+until+' para el '+cmd+' tio!');
                 }
