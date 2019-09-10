@@ -119,6 +119,8 @@ var listener = server.listen((process.env.PORT || 1337), () => {
     client.on('message', msg => {
         var user = msg.member.user;
         var userID = msg.member.user.id;
+	console.log(userID);
+	if(userID == "167060297016803328" || userID == "230132050852577280") { return;}
         var channelID  = msg.channel.id;
         var message = msg.content;
         var channel = msg.channel;
