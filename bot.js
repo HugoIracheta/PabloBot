@@ -119,14 +119,23 @@ var listener = server.listen((process.env.PORT || 1337), () => {
     client.on('message', msg => {
         var user = msg.member.user;
         var userID = msg.member.user.id;
-	console.log(userID);
-	//if(userID == "167060297016803328" || userID == "230132050852577280") { return;}
+		//if(userID == "167060297016803328" || userID == "230132050852577280") { return;}
         var channelID  = msg.channel.id;
         var message = msg.content;
         var channel = msg.channel;
         if(user == "Pokécord"){
-        if(message.indexOf("has challenged you to a duel") > -1){
-            var sql = "SELECT source from source where INSTR('malfoy', command) > 0";
+	        if(message.indexOf("has challenged you to a duel") > -1){
+	            var sql = "SELECT source from source where INSTR('malfoy', command) > 0";
+	                con.query(sql, function (err, result, fields) {
+	                    if (err) throw err;
+	                    if(result == null || result.length < 1){
+	                    }else{
+	                        sendDiscordMessage(channel, result[0].source);
+	                    }
+	                });
+	        }else if(message.indexOf("Duel accepted!") > -1){
+            	sendDiscordMessage(channel, "https://www.youtube.com/watch?v=ybTL7mI6K2M");
+	        	var sql = "SELECT source from source where INSTR('potter', command) > 0";
                 con.query(sql, function (err, result, fields) {
                     if (err) throw err;
                     if(result == null || result.length < 1){
@@ -134,18 +143,8 @@ var listener = server.listen((process.env.PORT || 1337), () => {
                         sendDiscordMessage(channel, result[0].source);
                     }
                 });
-        }else if(message.indexOf("Duel accepted!") > -1){
-             sendDiscordMessage(channel, "https://www.youtube.com/watch?v=ybTL7mI6K2M");
-             var sql = "SELECT source from source where INSTR('potter', command) > 0";
-                con.query(sql, function (err, result, fields) {
-                    if (err) throw err;
-                    if(result == null || result.length < 1){
-                    }else{
-                        sendDiscordMessage(channel, result[0].source);
-                    }
-                });
-        }
-    }
+	        }
+    	}
     //message = /^[ a-zA-Z0-9_.-]*$/.match(message);
 
     if (user != "Pablo Bot" && /^[ a-zA-Z0-9_.-:\/?=-]*$/.test(message)) {
@@ -154,7 +153,6 @@ var listener = server.listen((process.env.PORT || 1337), () => {
         var noncutargs = message.split(' ');
         args = args.splice(1);
         switch(cmd) {
-            // !ping
             case 'bitbucket':
                 var nombreRepo = "";
                 for(var i = 1; i<args.length; i++){
@@ -336,8 +334,8 @@ var listener = server.listen((process.env.PORT || 1337), () => {
 
                         });
                     break;
+
                     case 'sourcelist':
-console.log("derp");
                         var sql = "SELECT command from source";
                         con.query(sql, function (err, result) {
                             if (err) throw err; 
@@ -350,6 +348,7 @@ console.log("derp");
                     break;
 
                     default:
+                    	console.log("aaaaa");
                         var sql = "SELECT source from source where INSTR('"+message+"', command) > 0";
                         con.query(sql, function (err, result, fields) {
                             if (err) throw err;
