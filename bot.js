@@ -237,7 +237,7 @@ var listener = server.listen((process.env.PORT || 1337), () => {
             case 'factor':
                 var year = new Date();
                 year = year.getFullYear();
-                var christmas  = new Date(year, 06, 26);
+                var christmas  = new Date(year, 07, 24);
                 var today = new Date();
                 var until = Date.daysBetween(today, christmas);
                 sendDiscordMessage(channel, 'Faltan '+until+' dias para LOS TACOS ARABES!');
