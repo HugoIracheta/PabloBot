@@ -367,7 +367,9 @@ var listener = server.listen((process.env.PORT || 1337), () => {
                             if (err) throw err; 
                             var message = "";
                             for(var i = 0; i<result.length; i++){
-                              message += " !"+result[i].command+",";
+                            	if(result[i].command != "hugov13rn3s" || result[i].command != "hom30ffice"){
+                              		message += " "+result[i].command+",";
+                            	}
                             }
                             sendDiscordMessage(channel, message);
                         });
