@@ -147,6 +147,16 @@ server.post('/twitch', (req, res) => {
     }
 });
 
+server.get('/twitch', (req, res) => {
+    console.log(req);
+    res.status(200);
+    res.send();
+    try{
+    }catch(ex){
+        console.log(ex);
+    }
+});
+
 var listener = server.listen((process.env.PORT || 1337), () => {
     console.log("Server is up and running...");
     console.log(listener.address());
