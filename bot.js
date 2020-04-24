@@ -138,9 +138,13 @@ server.post('/bitbucket', (req, res) => {
 });
 
 server.post('/twitch', (req, res) => {
-    console.log(req.body);
     res.status(200);
     res.send();
+    console.log(req.body);
+    if(req.body["data"][0]){
+        var info = data[0];
+        sendDiscordMessage(client.channels.get("690616220512288788"), createEmbeded(info["title"], "https://www.twitch.tv/pinedastemen", info["username"], "https://pbs.twimg.com/profile_images/1177235979913924608/K-ZDJZli_400x400.jpg", "https://www.twitch.tv/pinedastemen", "El Tio esta strimiando en twitch", info["thumbnail_url"], ""));
+    }
     try{
     }catch(ex){
         console.log(ex);
