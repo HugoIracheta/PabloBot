@@ -147,10 +147,9 @@ server.post('/twitch', (req, res) => {
     }
 });
 
-server.get('/twitch', (req, res) => {
-    console.log(req.query["hub.challenge"]);
+server.get('/twitch', (req, res) => { 
     res.status(200);
-    res.send();
+    res.send(req.query["hub.challenge"]);
     try{
     }catch(ex){
         console.log(ex);
